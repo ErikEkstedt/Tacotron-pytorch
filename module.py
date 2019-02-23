@@ -6,7 +6,9 @@ from collections import OrderedDict
 import numpy as np
 import hyperparams as hp
 
+
 use_cuda = torch.cuda.is_available()
+
 
 class SeqLinear(nn.Module):
     """
@@ -43,6 +45,7 @@ class SeqLinear(nn.Module):
 
         return out
 
+
 class Prenet(nn.Module):
     """
     Prenet before passing through the network
@@ -72,6 +75,7 @@ class Prenet(nn.Module):
         out = self.layer(input_)
 
         return out
+
 
 class CBHG(nn.Module):
     """
@@ -156,7 +160,7 @@ class CBHG(nn.Module):
 
         # Convolution bank filters
         for k, (conv, batchnorm) in enumerate(zip(self.convbank_list, self.batchnorm_list)):
-            convbank_input = F.relu(batchnorm(self._conv_fit_dim(conv(convbank_input), k+1).contiguous()))
+            convbank_input = torch.relu(batchnorm(self._conv_fit_dim(conv(convbank_input), k+1).contiguous()))
             convbank_list.append(convbank_input)
 
         # Concatenate all features
@@ -166,7 +170,7 @@ class CBHG(nn.Module):
         conv_cat = self.max_pool(conv_cat)[:,:,:-1]
 
         # Projection
-        conv_projection = F.relu(self.batchnorm_proj_1(self._conv_fit_dim(self.conv_projection_1(conv_cat))))
+        conv_projection = torch.relu(self.batchnorm_proj_1(self._conv_fit_dim(self.conv_projection_1(conv_cat))))
         conv_projection = self.batchnorm_proj_2(self._conv_fit_dim(self.conv_projection_2(conv_projection))) + input_
 
         # Highway networks
@@ -189,6 +193,7 @@ class Highwaynet(nn.Module):
     """
     Highway network
     """
+
     def __init__(self, num_units, num_layers=4):
         """
 
@@ -211,18 +216,20 @@ class Highwaynet(nn.Module):
         # highway gated function
         for fc1, fc2 in zip(self.linears, self.gates):
 
-            h = F.relu(fc1.forward(out))
-            t = F.sigmoid(fc2.forward(out))
+            h = torch.relu(fc1.forward(out))
+            t = torch.sigmoid(fc2.forward(out))
 
             c = 1. - t
             out = h * t + out * c
 
         return out
 
+
 class AttentionDecoder(nn.Module):
     """
     Decoder with attention mechanism (Vinyals et al.)
     """
+
     def __init__(self, num_units):
         """
 
@@ -258,9 +265,9 @@ class AttentionDecoder(nn.Module):
         d_t_duplicate = self.W2(d_t).unsqueeze(1).expand_as(memory)
 
         # Calculate attention score and get attention weights
-        attn_weights = self.v(F.tanh(keys + d_t_duplicate).view(-1, self.num_units)).view(-1, memory_len, 1)
+        attn_weights = self.v(torch.tanh(keys + d_t_duplicate).view(-1, self.num_units)).view(-1, memory_len, 1)
         attn_weights = attn_weights.squeeze(2)
-        attn_weights = F.softmax(attn_weights)
+        attn_weights = torch.softmax(attn_weights, dim=1)
 
         # Concatenate with original query
         d_t_prime = torch.bmm(attn_weights.view([batch_size,1,-1]), memory).squeeze(1)

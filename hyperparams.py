@@ -2,7 +2,7 @@
 
 num_mels = 80
 num_freq = 1024
-sample_rate = 20000
+sample_rate = 16000
 frame_length_ms = 50.
 frame_shift_ms = 12.5
 preemphasis = 0.97
@@ -25,6 +25,6 @@ save_step = 2000
 
 cleaners='english_cleaners'
 
-data_path = '../data'
+data_path = '/home/erik/Data/LJSpeech/LJSpeech-1.1'
 output_path = './result'
 checkpoint_path = './model_new'

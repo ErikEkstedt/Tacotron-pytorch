@@ -1,9 +1,12 @@
 #-*- coding: utf-8 -*-
 
-from module import *
+import torch
+import torch.nn as nn
+from module import Prenet, CBHG, AttentionDecoder, SeqLinear
 from text.symbols import symbols
 import hyperparams as hp
 import random
+
 
 class Encoder(nn.Module):
     """
@@ -27,6 +30,7 @@ class Encoder(nn.Module):
         memory = self.cbhg.forward(prenet)
 
         return memory
+
 
 class MelDecoder(nn.Module):
     """
@@ -53,11 +57,13 @@ class MelDecoder(nn.Module):
             prev_output = dec_input[:, :, 0]
 
             for i in range(timesteps):
-                prev_output, attn_hidden, gru1_hidden, gru2_hidden = self.attn_decoder.forward(prev_output, memory,
-                                                                                             attn_hidden=attn_hidden,
-                                                                                             gru1_hidden=gru1_hidden,
-                                                                                             gru2_hidden=gru2_hidden)
+                out = self.attn_decoder.forward(prev_output,
+                        memory,
+                        attn_hidden=attn_hidden,
+                        gru1_hidden=gru1_hidden,
+                        gru2_hidden=gru2_hidden)
 
+                prev_output, attn_hidden, gru1_hidden, gru2_hidden = out
                 outputs.append(prev_output)
 
                 if random.random() < hp.teacher_forcing_ratio:
@@ -77,16 +83,21 @@ class MelDecoder(nn.Module):
             for i in range(hp.max_iters):
                 prev_output = self.prenet.forward(prev_output)
                 prev_output = prev_output[:,:,0]
-                prev_output, attn_hidden, gru1_hidden, gru2_hidden = self.attn_decoder.forward(prev_output, memory,
-                                                                                         attn_hidden=attn_hidden,
-                                                                                         gru1_hidden=gru1_hidden,
-                                                                                         gru2_hidden=gru2_hidden)
+                out = self.attn_decoder.forward(
+                        prev_output,
+                        memory,
+                        attn_hidden=attn_hidden,
+                        gru1_hidden=gru1_hidden,
+                        gru2_hidden=gru2_hidden)
+
+                prev_output, attn_hidden, gru1_hidden, gru2_hidden = out 
                 outputs.append(prev_output)
                 prev_output = prev_output[:, :, -1].unsqueeze(2)
 
             outputs = torch.cat(outputs, 2)
 
         return outputs
+
 
 class PostProcessingNet(nn.Module):
     """
@@ -106,6 +117,7 @@ class PostProcessingNet(nn.Module):
         out = self.linear.forward(torch.transpose(out,1,2))
 
         return out
+
 
 class Tacotron(nn.Module):
     """

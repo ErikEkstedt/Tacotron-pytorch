@@ -1,10 +1,10 @@
 #-*- coding: utf-8 -*-
 
 import re
-from Tacotron.text import cleaners
-from Tacotron.text.symbols import symbols
-
-
+# from Tacotron.text import cleaners
+# from Tacotron.text.symbols import symbols
+from text import cleaners
+from text.symbols import symbols
 
 
 # Mappings from symbol to numeric ID and vice versa:
