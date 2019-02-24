@@ -1,21 +1,14 @@
+import torch
 import hyperparams as hp
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 from os.path import join
-import librosa
 import numpy as np
 from text import text_to_sequence
-import collections
-from scipy import signal
 
 
 def _pad_data(x, length):
-    _pad = 0
-    return np.pad(x, (0, length - x.shape[0]), mode='constant', constant_values=_pad)
-
-
-def _pad_data(x, length):
-    _pad = 0
+    _pad = 0.
     return np.pad(x, (0, length - x.shape[0]), mode='constant', constant_values=_pad)
 
 
@@ -64,20 +57,17 @@ class LJProcessedDatasets(Dataset):
 
 
 def processed_collate_fn(batch):
-    # Puts each data field into a tensor with outer dimension batch size
-    print('hej')
-
     text = []
     mel = []
-    magnitude = []
+    linear = []
 
     for d in batch:
         text.append(d['text'])
-        magnitude.append(d['linear'])
+        linear.append(d['linear'])
         mel.append(d['mel'])
 
     mel = _pad_specs(mel)
-    magnitude = _pad_specs(magnitude)
+    linear = _pad_specs(linear)
 
     timesteps = mel.shape[-1]
 
@@ -85,11 +75,37 @@ def processed_collate_fn(batch):
     text = _prepare_data(text).astype(np.int32)
 
     # PAD with zeros that can be divided by outputs per step
-    if timesteps % hp.outputs_per_step != 0:
-        magnitude = _pad_per_step(magnitude)
+    if not timesteps % hp.outputs_per_step == 0:
+        linear = _pad_per_step(linear)
         mel = _pad_per_step(mel)
 
-    return text, magnitude, mel
+    text = torch.from_numpy(text).long()
+    linear = torch.from_numpy(linear)
+    mel = torch.from_numpy(mel)
+
+    return text, linear, mel
+
+
+def get_dataloader(
+            datapath,
+            batch_size=32,
+            small=False,
+            **kwargs):
+
+    csv_file = join(datapath, 'metadata.csv')
+    wavs = join(datapath, 'wavs')
+
+    if small:
+        csv_file = join(datapath, 'metadata_small.csv')
+
+    dset = LJProcessedDatasets(csv_file, wavs)
+    dloader = DataLoader(dset,
+            batch_size=batch_size,
+            shuffle=True,
+            collate_fn=processed_collate_fn,
+            **kwargs)
+
+    return dloader 
 
 
 if __name__ == "__main__":
@@ -107,9 +123,12 @@ if __name__ == "__main__":
 
     dloader = DataLoader(dset, batch_size=32, shuffle=True, collate_fn=processed_collate_fn, drop_last=True)
 
-    for text, magnitude, mel in dloader:
+    for text, linear, mel in dloader:
         print('text: ', text.shape)
-        print('linear: ', magnitude.shape)
+        print('text: ', text.dtype)
+        print('linear: ', linear.shape)
+        print('linear: ', linear.dtype)
         print('mel: ', mel.shape)
+        print('mel: ', mel.dtype)
         break
 

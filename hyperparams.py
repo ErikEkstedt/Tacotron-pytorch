@@ -25,6 +25,6 @@ save_step = 2000
 
 cleaners='english_cleaners'
 
-data_path = '/home/erik/Data/LJSpeech/LJSpeech-1.1'
-output_path = './result'
-checkpoint_path = './model_new'
+data_path = '/home/erikekst/Tacotron-pytorch/Data/LJSpeech-1.1'
+output_path = 'result'
+checkpoint_path = 'model_new'

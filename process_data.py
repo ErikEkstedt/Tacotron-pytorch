@@ -20,10 +20,10 @@ def extract_spectrograms(y):
     '''
     Extracts linear and Mel Spectrograms
     '''
-    D = np.abs(_stft(preemphasis(y)))
+    D = np.abs(_stft(preemphasis(y))).astype(np.float32)
     S = _amp_to_db(D) - hp.ref_level_db
-    MelS = _amp_to_db(_linear_to_mel(D))
-    return _normalize(MelS), _normalize(S)
+    MelS = _amp_to_db(_linear_to_mel(D)) - hp.ref_level_db
+    return _normalize(MelS).astype(np.float32), _normalize(S).astype(np.float32)
 
 
 def save_spectrogram(wavpath):
