@@ -1,10 +1,9 @@
 import hyperparams as hp
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
-import os
+from os.path import join
 import librosa
 import numpy as np
-# from Tacotron.text import text_to_sequence
 from text import text_to_sequence
 import collections
 from scipy import signal
@@ -15,9 +14,23 @@ def _pad_data(x, length):
     return np.pad(x, (0, length - x.shape[0]), mode='constant', constant_values=_pad)
 
 
+def _pad_data(x, length):
+    _pad = 0
+    return np.pad(x, (0, length - x.shape[0]), mode='constant', constant_values=_pad)
+
+
 def _prepare_data(inputs):
     max_len = max((len(x) for x in inputs))
     return np.stack([_pad_data(x, max_len) for x in inputs])
+
+
+def _pad_specs(inputs):
+    def pad(x, max_len):
+        diff = max_len - x.shape[1]
+        pad = np.zeros((x.shape[0], diff), dtype=np.float32)
+        return np.hstack((x, pad))
+    max_len = max((x.shape[1] for x in inputs))
+    return np.stack([pad(x, max_len) for x in inputs])
 
 
 def _pad_per_step(inputs):
@@ -38,48 +51,45 @@ class LJProcessedDatasets(Dataset):
         self.root_dir = root_dir
 
     def __len__(self):
-        # return len(self.landmarks_frame)
-        return 5 
+        return len(self.landmarks_frame)
 
     def __getitem__(self, idx):
         text = self.landmarks_frame.ix[idx, 1]
         text = np.asarray(text_to_sequence(text, [hp.cleaners]), dtype=np.int32)
 
-        npy_name = os.path.join(self.root_dir, self.landmarks_frame.ix[idx, 0]) + '.npy'
+        npy_name = join(self.root_dir, self.landmarks_frame.ix[idx, 0]) + '.npy'
         data = np.load(npy_name).item()
         sample = {'text': text, 'mel': data['mel_spec'], 'linear': data['linear_spec']}
         return sample
 
 
 def processed_collate_fn(batch):
-
     # Puts each data field into a tensor with outer dimension batch size
-    if isinstance(batch[0], collections.Mapping):
-        keys = list()
+    print('hej')
 
-        text = []
-        mel = []
-        magnitude = []
+    text = []
+    mel = []
+    magnitude = []
 
-        for d in batch:
-            text.append(d['text'])
-            magnitude.append(d['linear'])
-            mel.append(d['mel'])
+    for d in batch:
+        text.append(d['text'])
+        magnitude.append(d['linear'])
+        mel.append(d['mel'])
 
-        timesteps = mel.shape[-1]
+    mel = _pad_specs(mel)
+    magnitude = _pad_specs(magnitude)
 
-        # PAD sequences with largest length of the batch
-        text = _prepare_data(text).astype(np.int32)
+    timesteps = mel.shape[-1]
 
-        # PAD with zeros that can be divided by outputs per step
-        if timesteps % hp.outputs_per_step != 0:
-            magnitude = _pad_per_step(magnitude)
-            mel = _pad_per_step(mel)
+    # PAD sequences with largest length of the batch
+    text = _prepare_data(text).astype(np.int32)
 
-        return text, magnitude, mel
+    # PAD with zeros that can be divided by outputs per step
+    if timesteps % hp.outputs_per_step != 0:
+        magnitude = _pad_per_step(magnitude)
+        mel = _pad_per_step(mel)
 
-    raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}"
-                     .format(type(batch[0]))))
+    return text, magnitude, mel
 
 
 if __name__ == "__main__":
@@ -88,11 +98,18 @@ if __name__ == "__main__":
     wavs = 'Data/LJSpeech-1.1/wavs'
     dset = LJProcessedDatasets(csv_file, wavs)
 
-    d = dset[0]
-
-    for d in dset[:4]:
+    for d in dset:
         print(d['text'].shape)
         print(d['mel'].shape)
         print(d['linear'].shape)
+        break
 
-    dloader = DataLoader(dset, batch_size=2, shuffle=True, collate_fn=processed_collate_fn, drop_last=True)
+
+    dloader = DataLoader(dset, batch_size=32, shuffle=True, collate_fn=processed_collate_fn, drop_last=True)
+
+    for text, magnitude, mel in dloader:
+        print('text: ', text.shape)
+        print('linear: ', magnitude.shape)
+        print('mel: ', mel.shape)
+        break
+

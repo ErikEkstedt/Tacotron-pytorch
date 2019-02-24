@@ -198,3 +198,25 @@ def get_param_size(model):
 
 def get_dataset():
     return LJDatasets(os.path.join(hp.data_path,'metadata.csv'), os.path.join(hp.data_path,'wavs'))
+
+
+if __name__ == "__main__":
+
+    csv_file = 'Data/LJSpeech-1.1/metadata.csv'
+    wavs = 'Data/LJSpeech-1.1/wavs'
+    dset = LJDatasets(csv_file, wavs)
+
+    # for d in dset:
+    #     print(d['text'].shape)
+    #     print(d['mel'].shape)
+    #     print(d['linear'].shape)
+    #     break
+
+    dloader = DataLoader(dset, batch_size=32, shuffle=True, collate_fn=collate_fn, drop_last=True)
+
+    for text, magnitude, mel in dloader:
+        print('text: ', text.shape)
+        print('linear: ', magnitude.shape)
+        print('mel: ', mel.shape)
+        break
+
