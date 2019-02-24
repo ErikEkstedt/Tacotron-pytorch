@@ -57,7 +57,6 @@ if __name__ == '__main__':
     input()
     model = Tacotron().to(device)
     model = nn.DataParallel(model, device_ids=args.device_ids)
-    # model = nn.DataParallel(model)
 
     # Make optimizer
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
