@@ -11,16 +11,53 @@ from tqdm import tqdm
 import torch.nn as nn
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-def main(args):
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+
+
+def adjust_learning_rate(optimizer, step):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    if step == 500000:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = 0.0005
+
+    elif step == 1000000:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = 0.0003
+
+    elif step == 2000000:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = 0.0001
+
+    return optimizer
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--restore_step', type=int, help='Global step to restore checkpoint', default=0)
+    parser.add_argument('--batch_size', type=int, help='Batch size', default=32)
+    parser.add_argument('--device_ids', nargs='+', default=None, type=int)
+    args = parser.parse_args()
+
+    if not args.device_ids:
+        args.device = 'cuda'
+    else:
+        args.device = f'cuda:{args.device_ids[0]}'
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # Get dataset
     dataset = get_dataset()
 
     # Construct model
-    model = nn.DataParallel(Tacotron().to(device))
+    print('device ids: ', args.device_ids)
+    print('continue?')
+    input()
+    model = Tacotron().to(device)
+    model = nn.DataParallel(model, device_ids=args.device_ids)
+    # model = nn.DataParallel(model)
 
     # Make optimizer
     optimizer = optim.Adam(model.parameters(), lr=hp.lr)
@@ -108,32 +145,3 @@ def main(args):
 
             if current_step in hp.decay_step:
                 optimizer = adjust_learning_rate(optimizer, current_step)
-
-
-def save_checkpoint(state, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
-
-
-def adjust_learning_rate(optimizer, step):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    if step == 500000:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = 0.0005
-
-    elif step == 1000000:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = 0.0003
-
-    elif step == 2000000:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = 0.0001
-
-    return optimizer
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--restore_step', type=int, help='Global step to restore checkpoint', default=0)
-    parser.add_argument('--batch_size', type=int, help='Batch size', default=32)
-    args = parser.parse_args()
-    main(args)

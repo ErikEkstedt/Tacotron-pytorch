@@ -6,8 +6,6 @@ from glob import glob
 from ml_reusable.utils.multiproc import run_in_parallel
 
 
-
-
 def download_data(path):
     url = 'https://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2'
     cmd = ['wget', url, '-P', path]
@@ -34,13 +32,15 @@ if __name__ == "__main__":
     parser.add_argument('-sr', '--sampling_rate', type=int, default=16000)
     args = parser.parse_args()
 
+
     print('----------Downloading Data------------')
-    # download_data(args.datapath)
+    download_data(args.datapath)
 
 
     print('----------Extracting Data-------------')
     file = join(args.datapath, 'LJSpeech-1.1.tar.bz2')
-    # extract(file)
+    extract(file)
+
 
     print('----------Downsampling Data-----------')
     print('==> ', args.sampling_rate)
