@@ -287,12 +287,12 @@ class AttentionDecoder(nn.Module):
 
     def inithidden(self, batch_size):
         if use_cuda:
-            attn_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False).cuda()
-            gru1_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False).cuda()
-            gru2_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False).cuda()
+            attn_hidden = torch.zeros(batch_size, self.num_units).cuda()
+            gru1_hidden = torch.zeros(batch_size, self.num_units).cuda()
+            gru2_hidden = torch.zeros(batch_size, self.num_units).cuda()
         else:
-            attn_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False)
-            gru1_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False)
-            gru2_hidden = Variable(torch.zeros(batch_size, self.num_units), requires_grad=False)
+            attn_hidden = torch.zeros(batch_size, self.num_units)
+            gru1_hidden = torch.zeros(batch_size, self.num_units)
+            gru2_hidden = torch.zeros(batch_size, self.num_units)
 
         return attn_hidden, gru1_hidden, gru2_hidden
